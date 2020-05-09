@@ -1,0 +1,81 @@
+﻿(defn and-simplify [l]
+  (if (= 'and (nth l 0)) 
+  (cond
+    (some false? (rest l)) false
+    (every? true? (rest l)) true
+    (= 1 (count (filter symbol? (rest l)))) (first (filter symbol? (rest l)))
+    (some symbol? (rest l)) (filter symbol? l)
+    ) l))
+
+(defn or-simplify [l]
+  (if (= 'or (nth l 0)) 
+    (cond 
+      (some true? (rest l)) true
+      (every? false? (rest l)) false
+      (= 1 (count (filter symbol? (rest l)))) (first (filter symbol? (rest l)))
+      (some symbol? (rest l)) (filter symbol? l)
+	)
+    l 
+  ))
+
+(defn not-simplify-helper [l]
+  (cond
+    (= 'and (nth l 0)) (conj (map (fn [i] (list 'not i)) (rest l)) 'or )
+    (= 'or (nth l 0)) (conj (map #(list 'not %) (rest l)) 'and )
+    (= 'not (nth l 0)) (second l)
+  ))
+
+
+
+
+; (not (not (not (not x)))) x
+; (not (not           x  ))
+;                     x
+
+; (not (not (not x))) -> not x
+
+; not (x and y) -> (not x) or (not y)
+
+;(def some-list '(first (first-nested second-nested) (another list))
+;(rest some-list) -> ((first-nested second-nested))
+;(second some-list) -> (first-nested second-nested)
+
+(defn not-simplify [l]
+  (if (= 'not (nth l 0)) 
+    (cond
+      (every? false? (rest l)) true
+      (every? true? (rest l)) false
+      (seq? (second l)) (not-simplify-helper (second l))    
+    l
+  ))
+ 
+
+
+(def p1 '(and x (or x (and y (not z)))))
+(def p2 '(and (and z false)(or x true)))
+(def p3 '(or true a))
+
+(defn andexp [e1 e2] (list 'and e1 e2))
+(defn orexp [e1 e2] (list 'or e1 e2))
+(defn notexp [e1] (list 'not e1))
+
+
+(defn evalexp [exp bindings] (simplify (bind-values bindings exp)))
+
+;(or (and x y) false) ; 
+  
+  (defn deep-substitute 
+  "Given a map of replacement key/value pairs, m, and a list, l, returns a list with values from l, 
+   but with any elements equal to a key in m replaced with the corresponding val in m.
+   If l contains nested lists, recursively performs replacement in those lists as well."
+  [l m]
+  (map (fn [i] 
+         (if (seq? i)
+           (deep-substitute i m)
+           (lookup i m))) 
+        l))
+  
+(defn lookup
+  "Look up a value, i, in map m and returns the result if it exists. Otherwise returns i."
+  [i m]
+  (get m i i))
